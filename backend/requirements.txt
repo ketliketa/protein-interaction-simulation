@@ -1,0 +1,10 @@
+# Core dependencies
+Flask==2.3.3
+Flask-CORS==4.0.0
+requests==2.31.0
+
+# Utility packages
+python-dotenv==1.0.0
+
+# Optional for better performance
+gunicorn==21.2.0

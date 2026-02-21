@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧬 Protein Interaction Visualizer</title>
+    
+    <!-- 3Dmol.js për vizualizimin e strukturave molekulare -->
+    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+    
+    <!-- CSS i jashtëm -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Meta tags për SEO dhe social media -->
+    <meta name="description" content="Aplikacion për vizualizimin dhe simulimin e ndërveprimit të proteinave në 3D">
+    <meta name="keywords" content="proteina, biokimi, vizualizim 3D, docking, simulim molekular">
+    <meta name="author" content="Protein Interaction Visualizer Team">
+    
+    <!-- Open Graph për social media -->
+    <meta property="og:title" content="Protein Interaction Visualizer">
+    <meta property="og:description" content="Vizualizoni dhe simuloni ndërveprimin e proteinave në 3D">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>">
+    
+    <!-- Preload për performancë më të mirë -->
+    <link rel="preconnect" href="https://3Dmol.org">
+    <link rel="preconnect" href="http://localhost:5000">
+</head>
+<body>
+    <!-- Container kryesor -->
+    <div class="container">
+        
+        <!-- Header -->
+        <header class="header">
+            <h1 class="main-title">
+                <span class="icon">🧬</span>
+                Simulimi i Ndërveprimit të Proteinave
+                <span class="icon">🔬</span>
+            </h1>
+            <p class="subtitle">
+                Zbuloni dhe analizoni ndërveprimet molekulare në 3D
+            </p>
+        </header>
+
+        <!-- Seksioni i inputeve -->
+        <section class="input-section" aria-label="Kontrollet e proteinave">
+            <div class="protein-controls">
+                
+                <!-- Proteina e parë -->
+                <div class="protein-input-group">
+                    <label for="protein1" class="input-label">
+                        <span class="protein-number">1</span>
+                        Proteina e Parë
+                    </label>
+                    <div class="input-container">
+                        <input 
+                            type="text" 
+                            id="protein1" 
+                            class="protein-input" 
+                            placeholder="Shkruani emrin e proteinës (p.sh. insulin, hemoglobin)"
+                            aria-describedby="protein1-help"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button 
+                            type="button" 
+                            class="load-button" 
+                            onclick="loadProtein(1)"
+                            aria-label="Ngarko proteinën e parë"
+                        >
+                            <span class="button-icon">📊</span>
+                            <span class="button-text">Ngarko Proteinën</span>
+                        </button>
+                    </div>
+                    <small id="protein1-help" class="input-help">
+                        Shembuj: insulin, hemoglobin, lysozyme, albumin
+                    </small>
+                </div>
+
+                <!-- Proteina e dytë -->
+                <div class="protein-input-group">
+                    <label for="protein2" class="input-label">
+                        <span class="protein-number">2</span>
+                        Proteina e Dytë
+                    </label>
+                    <div class="input-container">
+                        <input 
+                            type="text" 
+                            id="protein2" 
+                            class="protein-input" 
+                            placeholder="Shkruani emrin e proteinës së dytë"
+                            aria-describedby="protein2-help"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button 
+                            type="button" 
+                            class="load-button" 
+                            onclick="loadProtein(2)"
+                            aria-label="Ngarko proteinën e dytë"
+                        >
+                            <span class="button-icon">📊</span>
+                            <span class="button-text">Ngarko Proteinën</span>
+                        </button>
+                    </div>
+                    <small id="protein2-help" class="input-help">
+                        Kërkoni proteina që mund të ndërveprojnë me të parën
+                    </small>
+                </div>
+
+                <!-- Butoni për bashkimin -->
+                <div class="dock-section">
+                    <button 
+                        type="button" 
+                        class="dock-button" 
+                        onclick="combineProteins()"
+                        aria-label="Simuloj bashkimin e proteinave"
+                        disabled
+                        id="dockButton"
+                    >
+                        <span class="button-icon">🔗</span>
+                        <span class="button-text">Simuloj Bashkimin e Proteinave</span>
+                        <span class="button-subtext">Ngarko të dy proteinat fillimisht</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seksioni i loading-ut -->
+        <section class="loading-section" id="loadingDiv" style="display: none;" aria-live="polite">
+            <div class="loading-content">
+                <div class="spinner" aria-hidden="true"></div>
+                <p class="loading-text" id="loadingText">Duke procesuar...</p>
+                <div class="loading-progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seksioni i statusit -->
+        <section class="status-section" id="statusDisplay" style="display: none;" aria-live="polite">
+            <div class="status-content">
+                <h3 class="status-title">
+                    <span class="status-icon" id="statusIcon">ℹ️</span>
+                    Statusi i Operacionit
+                </h3>
+                <p class="status-message" id="statusMessage"></p>
+                <div class="status-details" id="statusDetails" style="display: none;"></div>
+            </div>
+        </section>
+
+        <!-- Visualizuesi 3D kryesor -->
+        <section class="viewer-section" aria-label="Visualizuesi i strukturave 3D">
+            <div class="viewer-header">
+                <h2 class="viewer-title">
+                    <span class="viewer-icon">🔬</span>
+                    Visualizuesi i Strukturave 3D
+                </h2>
+                <div class="viewer-controls">
+                    <button type="button" class="control-button" onclick="resetViewer()" title="Rivendos pamjen">
+                        <span>🔄</span>
+                    </button>
+                    <button type="button" class="control-button" onclick="toggleFullscreen()" title="Ekran i plotë">
+                        <span>⛶</span>
+                    </button>
+                    <button type="button" class="control-button" onclick="takeScreenshot()" title="Foto e ekranit">
+                        <span>📸</span>
+                    </button>
+                </div>
+            </div>
+            <div id="viewer" class="molecular-viewer" aria-label="Viewer i molekulave 3D"></div>
+            <div class="viewer-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #1e88e5;"></div>
+                    <span>Proteina 1 (Chain A)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #d32f2f;"></div>
+                    <span>Proteina 2 (Chain B)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #7b1fa2;"></div>
+                    <span>Zona e Kontaktit</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p class="footer-text">
+                    © 2025 Protein Interaction Visualizer | 
+                    <a href="#" onclick="showAbout()" class="footer-link">Rreth Aplikacionit</a> | 
+                    <a href="#" onclick="showHelp()" class="footer-link">Ndihmë</a>
+                </p>
+                <div class="footer-credits">
+                    <small>
+                        Përdor të dhëna nga 
+                        <a href="https://www.uniprot.org/" target="_blank" rel="noopener" class="external-link">UniProt</a> dhe 
+                        <a href="https://alphafold.ebi.ac.uk/" target="_blank" rel="noopener" class="external-link">AlphaFold</a>
+                    </small>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal për informacionet e proteinës -->
+    <div id="proteinModal" class="modal" role="dialog" aria-labelledby="proteinModalTitle" aria-hidden="true">
+        <div class="modal-overlay" onclick="closeModal()" aria-label="Mbyll modalin"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="proteinModalTitle" class="modal-title">
+                    <span class="modal-icon">🧬</span>
+                    Informacione mbi Proteinën
+                </h2>
+                <button 
+                    type="button" 
+                    class="close-button" 
+                    onclick="closeModal()"
+                    aria-label="Mbyll modalin"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="modal-left">
+                    <div class="modal-viewer-container">
+                        <div id="modalViewer" class="modal-viewer" aria-label="Viewer i proteinës në modal"></div>
+                        <div class="modal-viewer-controls">
+                            <button type="button" onclick="rotateModalViewer()" title="Rrotullo strukturën">
+                                <span>🔄</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-right">
+                    <div class="info-section">
+                        <h3 class="info-section-title">
+                            <span class="info-icon">📋</span>
+                            Detajet e Proteinës
+                        </h3>
+                        <div id="modalInfo" class="info-content"></div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3 class="info-section-title">
+                            <span class="info-icon">⚛️</span>
+                            Analiza e Strukturës
+                        </h3>
+                        <div id="modalStructureInfo" class="info-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal për analizën e bashkimit -->
+    <div id="dockingModal" class="modal" role="dialog" aria-labelledby="dockingModalTitle" aria-hidden="true">
+        <div class="modal-overlay" onclick="closeDockingModal()" aria-label="Mbyll modalin e bashkimit"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="dockingModalTitle" class="modal-title">
+                    <span class="modal-icon">🔬</span>
+                    Analiza e Bashkimit të Proteinave
+                </h2>
+                <button 
+                    type="button" 
+                    class="close-button" 
+                    onclick="closeDockingModal()"
+                    aria-label="Mbyll modalin e bashkimit"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="modal-left">
+                    <div class="modal-viewer-container">
+                        <div id="dockingViewer" class="modal-viewer" aria-label="Viewer i bashkimit në modal"></div>
+                        <div class="docking-viewer-controls">
+                            <button type="button" onclick="toggleDockingView()" title="Ndrysho pamjen">
+                                <span>👁️</span>
+                            </button>
+                            <button type="button" onclick="highlightInteractions()" title="Thekso ndërveprimet">
+                                <span>💡</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-right">
+                    <div class="analysis-section">
+                        <h3 class="analysis-title">
+                            <span class="analysis-icon">📊</span>
+                            Rezultatet e Analizës
+                        </h3>
+                        <div id="dockingAnalysis" class="analysis-content"></div>
+                    </div>
+                    
+                    <div class="export-section">
+                        <h3 class="export-title">
+                            <span class="export-icon">💾</span>
+                            Eksporto Rezultatet
+                        </h3>
+                        <div class="export-buttons">
+                            <button type="button" onclick="exportPDB()" class="export-button">
+                                <span>📄</span> Eksporto PDB
+                            </button>
+                            <button type="button" onclick="exportImage()" class="export-button">
+                                <span>🖼️</span> Eksporto Imazh
+                            </button>
+                            <button type="button" onclick="exportReport()" class="export-button">
+                                <span>📋</span> Raporti i Plotë
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal për ndihmën -->
+    <div id="helpModal" class="modal" role="dialog" aria-labelledby="helpModalTitle" aria-hidden="true">
+        <div class="modal-overlay" onclick="closeHelpModal()" aria-label="Mbyll modalin e ndihmës"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="helpModalTitle" class="modal-title">
+                    <span class="modal-icon">❓</span>
+                    Ndihmë për Përdorimin
+                </h2>
+                <button 
+                    type="button" 
+                    class="close-button" 
+                    onclick="closeHelpModal()"
+                    aria-label="Mbyll modalin e ndihmës"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="help-content">
+                    <div class="help-section">
+                        <h3>🚀 Si të Filloj</h3>
+                        <ol>
+                            <li>Shkruani emrin e proteinës së parë (p.sh. "insulin")</li>
+                            <li>Klikoni "Ngarko Proteinën" për ta vizualizuar</li>
+                            <li>Përsëriteni për proteinën e dytë</li>
+                            <li>Klikoni "Simuloj Bashkimin" për të parë ndërveprimin</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="help-section">
+                        <h3>🔍 Shembuj Proteinash</h3>
+                        <ul>
+                            <li><strong>insulin</strong> - Hormoni i sheqerit</li>
+                            <li><strong>hemoglobin</strong> - Proteina e gjakut</li>
+                            <li><strong>lysozyme</strong> - Enzimë antibakteriale</li>
+                            <li><strong>albumin</strong> - Proteina kryesore e serumit</li>
+                            <li><strong>collagen</strong> - Proteina strukturore</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-section">
+                        <h3>🎮 Kontrollet</h3>
+                        <ul>
+                            <li><strong>Klik dhe tërheq</strong> - Rrotullo strukturën</li>
+                            <li><strong>Scroll</strong> - Zoom in/out</li>
+                            <li><strong>Klik i djathtë</strong> - Zhvendos strukturën</li>
+                            <li><strong>Butonët</strong> - Rivendos, screenshot, fullscreen</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <!-- JavaScript i jashtëm -->
+    <script src="script.js"></script>
+    
+    <!-- Service Worker për caching (opsionale) -->
+    <script>
+        // Regjistroj service worker për offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+
+    <!-- Analytics (opsionale) -->
+    <script>
+        // Google Analytics ose statistika të tjera
+        // window.dataLayer = window.dataLayer || [];
+        // function gtag(){dataLayer.push(arguments);}
+        // gtag('js', new Date());
+        // gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+</body>
+</html>
